@@ -1,0 +1,38 @@
+{
+  "name": "create-initx",
+  "version": "1.0.0",
+  "description": "A CLI tool to scaffold a React (Vite) and Express fullstack application.",
+  "type": "module",
+  "main": "dist/cli.js",
+  "bin": {
+    "create-initx": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "templates"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/cli.js",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "cli",
+    "create-app",
+    "react",
+    "express",
+    "fullstack",
+    "vite"
+  ],
+  "author": "Syam Gowtham Geddam",
+  "license": "MIT",
+  "dependencies": {
+    "fs-extra": "^11.2.0",
+    "kolorist": "^1.8.0"
+  },
+  "devDependencies": {
+    "@types/fs-extra": "^11.0.4",
+    "@types/node": "^20.11.0",
+    "typescript": "^5.3.3"
+  }
+}
