@@ -33,18 +33,27 @@ jobs:
           test -f dist/startupBanner.js
 
       - name: Integration Test (Project Generation)
+        timeout-minutes: 5
         run: |
           mkdir test-sandbox
           cd test-sandbox
-          # Simulate user input for prompts
-          printf "ci-test-app\n\r\n\r\n\r\n\r\n\033[B\r" | node ../dist/cli.js
 
-          # Validation
+          # Sequence: 
+          # 1. Name: "ci-test-app" + Enter (\r)
+          # 2. Framework: Default (React) + Enter (\r)
+          # 3. Language: Default (JS) + Enter (\r)
+          # 4. Strategy: Default (Proxy) + Enter (\r)
+          # 5. AutoRun: Down Arrow (\033[B) to "No" + Enter (\r)
+          printf "ci-test-app\r\r\r\r\033[B\r" | node ../dist/cli.js
+
+          # Validation of structure
           test -d ci-test-app/frontend
           test -d ci-test-app/backend
           test -f ci-test-app/backend/index.js
           test -f ci-test-app/package.json
-          grep "proxy" ci-test-app/frontend/vite.config.js
+
+          # Verify the dynamic injection worked
+          grep "proxy" ci-test-app/frontend/vite.config.js || grep "proxy" ci-test-app/frontend/vite.config.ts
 
   publish:
     needs: build-and-test
