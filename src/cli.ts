@@ -1,65 +1,97 @@
-#!/usr/bin/env node
-
 import fs from "fs-extra";
 import path from "path";
-import { fileURLToPath } from "url";
-import { blue, green, cyan, red } from "kolorist";
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+import { execSync } from "child_process";
+import { blue, green, cyan, red, bold } from "kolorist";
+import { askQuestions } from "./prompts.js";
+import { generateBackendCode, generateViteConfig } from "./generator.js";
 
 async function run() {
-  const projectName = process.argv[2];
-
-  if (!projectName) {
-    console.log(red("\n❌ Error: Please specify a project name."));
-    console.log(blue("Usage: npx create-initx <project-name>"));
-    process.exit(1);
-  }
+  const response = await askQuestions(process.argv[2]);
+  const { projectName, language, authStrategy } = response;
+  if (!projectName) process.exit(1);
 
   const targetDir = path.resolve(process.cwd(), projectName);
-  const templateDir = path.resolve(__dirname, "../templates");
-
   if (fs.existsSync(targetDir)) {
-    console.log(red(`\n❌ Error: Directory "${projectName}" already exists.`));
+    console.log(red(`\nError: Directory "${projectName}" already exists.`));
     process.exit(1);
   }
 
-  console.log(cyan(`\n🚀 Creating your fullstack app: ${projectName}...`));
+  console.log(cyan(`\nBuilding ${projectName}...`));
+  fs.mkdirSync(targetDir);
 
+  console.log(blue("Scaffolding Frontend..."));
+  const template = language === "ts" ? "react-ts" : "react";
   try {
-    await fs.copy(templateDir, targetDir);
-
-    const foldersToFix = ["frontend", "backend"];
-
-    for (const folder of foldersToFix) {
-      const oldPath = path.join(targetDir, folder, "gitignore");
-      const newPath = path.join(targetDir, folder, ".gitignore");
-
-      if (fs.existsSync(oldPath)) {
-        fs.renameSync(oldPath, newPath);
-      }
-    }
-
-    const rootPkgPath = path.join(targetDir, "package.json");
-    if (fs.existsSync(rootPkgPath)) {
-      const pkg = await fs.readJson(rootPkgPath);
-      pkg.name = projectName;
-      await fs.writeJson(rootPkgPath, pkg, { spaces: 2 });
-    }
-
-    console.log(green("\n✨ Project generated successfully!"));
-    console.log(
-      blue(`
-    Next steps:
-    1. cd ${projectName}
-    2. npm run install-all
-    3. npm run dev
-    `),
+    execSync(
+      `npm create vite@latest frontend -- --template ${template} --no-interactive`,
+      {
+        cwd: targetDir,
+        stdio: "pipe",
+        env: {
+          ...process.env,
+          npm_config_yes: "true",
+          VITE_SKIP_PROMPT: "true",
+        },
+      },
     );
   } catch (err) {
-    console.error(red("\n❌ An error occurred:"), err);
-    process.exit(1);
+    console.log(red("Vite note: moving to backend..."));
   }
+
+  console.log(blue("Scaffolding Backend..."));
+  const backendDir = path.join(targetDir, "backend");
+  fs.ensureDirSync(backendDir);
+  execSync(`npm init -y`, { cwd: backendDir, stdio: "ignore" });
+
+  console.log(blue("Installing Dependencies..."));
+  execSync(
+    `npm install express ${authStrategy === "cors" ? "cors" : ""} nodemon`,
+    {
+      cwd: backendDir,
+      stdio: "ignore",
+    },
+  );
+
+  const backendPkg = fs.readJsonSync(path.join(backendDir, "package.json"));
+  backendPkg.scripts = { start: "node index.js", dev: "nodemon index.js" };
+  fs.writeJsonSync(path.join(backendDir, "package.json"), backendPkg, {
+    spaces: 2,
+  });
+  fs.writeFileSync(
+    path.join(backendDir, "index.js"),
+    generateBackendCode(authStrategy),
+  );
+
+  if (authStrategy === "proxy") {
+    const ext = language === "ts" ? "ts" : "js";
+    fs.writeFileSync(
+      path.join(targetDir, "frontend", `vite.config.${ext}`),
+      generateViteConfig(language),
+    );
+  }
+
+  const rootPkg = {
+    name: projectName,
+    version: "1.0.0",
+    scripts: {
+      "install-all":
+        "npm install && npm install --prefix frontend && npm install --prefix backend",
+      dev: 'npx concurrently "npm run dev --prefix frontend" "npm run dev --prefix backend"',
+    },
+    devDependencies: { concurrently: "^8.2.0" },
+  };
+  fs.writeJsonSync(path.join(targetDir, "package.json"), rootPkg, {
+    spaces: 2,
+  });
+
+  console.log(green("\nProject generated successfully!"));
+  console.log(
+    bold(
+      `\n  Next steps:\n  1. cd ${projectName}\n  2. npm run install-all\n  3. npm run dev\n`,
+    ),
+  );
 }
 
-run().catch(console.error);
+run().catch((err) => {
+  console.error(red("Generation failed:"), err);
+});
