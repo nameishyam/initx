@@ -32,9 +32,9 @@ my-app/
 
 #### Developed by Syam Gowtham
 
-- **GitHub**: [github.com/nameishyam](https://www.google.com/search?q=https://github.com/nameishyam)
-- **LinkedIn**: [linkedin.com/in/nameishyam](https://www.google.com/search?q=https://www.linkedin.com/in/nameishyam)
-- **Website**: [portfolio-syam.vercel.app](https://www.google.com/search?q=https://portfolio-syam.vercel.app)
+- **GitHub**: [github.com/nameishyam](https://github.com/nameishyam)
+- **LinkedIn**: [linkedin.com/in/nameishyam](https://www.linkedin.com/in/nameishyam)
+- **Website**: [portfolio-syam.vercel.app](https://portfolio-syam.vercel.app)
 
 ## License
 
