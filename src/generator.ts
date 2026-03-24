@@ -9,7 +9,8 @@ ${authStrategy === "cors" ? "app.use(cors());" : ""}
 
 app.get('/api/status', (req, res) => res.json({ status: 'ok', message: 'Backend connected!' }));
 
-app.listen(5000, () => console.log('Server running on http://localhost:5000'));
+app.listen(5000, 
+  () => console.log('Server running on http://localhost:5000'));
   `.trim();
 }
 
