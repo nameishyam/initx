@@ -1,5 +1,4 @@
 import fs from "fs-extra";
-import path from "path";
 
 export function generateBackendCode(authStrategy: string) {
   return `
@@ -14,15 +13,25 @@ app.listen(5000, () => console.log('Server running on http://localhost:5000'));
   `.trim();
 }
 
-export function generateViteConfig(language: string) {
-  return `
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
+export function addProxyToViteConfig(filePath: string) {
+  let content = fs.readFileSync(filePath, "utf-8");
 
-export default defineConfig({
-  plugins: [react()],
+  if (content.includes("proxy")) return;
+
+  if (content.includes("server:")) {
+    content = content.replace(
+      /server:\s*{/,
+      `server: {
+    proxy: { '/api': 'http://localhost:5000' },`,
+    );
+  } else {
+    content = content.replace(
+      /defineConfig\(\{/,
+      `defineConfig({
   server: {
     proxy: { '/api': 'http://localhost:5000' }
+  },`,
+    );
   }
-})`.trim();
+  fs.writeFileSync(filePath, content);
 }

@@ -3,11 +3,11 @@ import path from "path";
 import { execSync } from "child_process";
 import { blue, green, cyan, red, bold } from "kolorist";
 import { askQuestions } from "./prompts.js";
-import { generateBackendCode, generateViteConfig } from "./generator.js";
+import { generateBackendCode, addProxyToViteConfig } from "./generator.js";
 
 async function run() {
   const response = await askQuestions(process.argv[2]);
-  const { projectName, language, authStrategy } = response;
+  const { projectName, language, framework, authStrategy, autoRun } = response;
   if (!projectName) process.exit(1);
 
   const targetDir = path.resolve(process.cwd(), projectName);
@@ -20,10 +20,10 @@ async function run() {
   fs.mkdirSync(targetDir);
 
   console.log(blue("Scaffolding Frontend..."));
-  const template = language === "ts" ? "react-ts" : "react";
+  const currentFramework = language === "ts" ? `${framework}-ts` : framework;
   try {
     execSync(
-      `npm create vite@latest frontend -- --template ${template} --no-interactive`,
+      `npm create vite@latest frontend -- --template ${currentFramework} --no-interactive`,
       {
         cwd: targetDir,
         stdio: "pipe",
@@ -64,10 +64,9 @@ async function run() {
 
   if (authStrategy === "proxy") {
     const ext = language === "ts" ? "ts" : "js";
-    fs.writeFileSync(
-      path.join(targetDir, "frontend", `vite.config.${ext}`),
-      generateViteConfig(language),
-    );
+    const configPath = path.join(targetDir, "frontend", `vite.config.${ext}`);
+
+    addProxyToViteConfig(configPath);
   }
 
   const rootPkg = {
@@ -84,12 +83,27 @@ async function run() {
     spaces: 2,
   });
 
-  console.log(green("\nProject generated successfully!"));
-  console.log(
-    bold(
-      `\n  Next steps:\n  1. cd ${projectName}\n  2. npm run install-all\n  3. npm run dev\n Tip: Open your browser to http://localhost:5173 and\n fetch('/api/status') to see the connection in action!`,
-    ),
-  );
+  console.log(green("\nInitx setup complete!"));
+
+  if (autoRun) {
+    console.log(blue("Installing all dependencies..."));
+    execSync(`npm run install-all`, {
+      cwd: targetDir,
+      stdio: "inherit",
+    });
+
+    console.log(blue("Starting development servers..."));
+    execSync(`npm run dev`, {
+      cwd: targetDir,
+      stdio: "inherit",
+    });
+  } else {
+    console.log(
+      bold(
+        `\n  Next steps:\n  1. cd ${projectName}\n  2. npm run install-all\n  3. npm run dev`,
+      ),
+    );
+  }
 }
 
 run().catch((err) => {
