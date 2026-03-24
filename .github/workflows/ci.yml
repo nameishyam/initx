@@ -35,25 +35,22 @@ jobs:
       - name: Integration Test (Project Generation)
         timeout-minutes: 5
         run: |
+          # Create a clean space for the test
           mkdir test-sandbox
           cd test-sandbox
 
-          # Sequence: 
-          # 1. Name: "ci-test-app" + Enter (\r)
-          # 2. Framework: Default (React) + Enter (\r)
-          # 3. Language: Default (JS) + Enter (\r)
-          # 4. Strategy: Default (Proxy) + Enter (\r)
-          # 5. AutoRun: Down Arrow (\033[B) to "No" + Enter (\r)
-          printf "ci-test-app\r\r\r\r\033[B\r" | node ../dist/cli.js
+          # Run the CLI using the -y flag to bypass interactive prompts
+          # Usage: node <path-to-js> <project-name> <flags>
+          node ../dist/cli.js ci-test-app -y
 
-          # Validation of structure
+          # Validation of generated structure
           test -d ci-test-app/frontend
           test -d ci-test-app/backend
           test -f ci-test-app/backend/index.js
           test -f ci-test-app/package.json
 
-          # Verify the dynamic injection worked
-          grep "proxy" ci-test-app/frontend/vite.config.js || grep "proxy" ci-test-app/frontend/vite.config.ts
+          # Verify the dynamic injection (works for JS/TS)
+          grep "proxy" ci-test-app/frontend/vite.config.*
 
   publish:
     needs: build-and-test
