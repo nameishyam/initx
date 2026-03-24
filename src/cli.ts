@@ -87,7 +87,7 @@ async function run() {
   console.log(green("\nProject generated successfully!"));
   console.log(
     bold(
-      `\n  Next steps:\n  1. cd ${projectName}\n  2. npm run install-all\n  3. npm run dev\n`,
+      `\n  Next steps:\n  1. cd ${projectName}\n  2. npm run install-all\n  3. npm run dev\n Tip: Open your browser to http://localhost:5173 and\n fetch('/api/status') to see the connection in action!`,
     ),
   );
 }
