@@ -1,4 +1,4 @@
-# create-initx
+# initx
 
 A lightning-fast CLI tool to scaffold a modern full-stack application with **React (Vite)** on the frontend and **Express** on the backend, pre-configured with a root orchestrator.
 
@@ -17,27 +17,7 @@ You don't need to install anything globally. Just run:
 npx create-initx my-app
 ```
 
-### Installation
-
-After the scaffolding is complete, follow these steps:
-
-1.  **Navigate to the project directory:**
-
-    ```bash
-    cd my-app
-    ```
-
-2.  **Install all dependencies (Root, Frontend, and Backend):**
-
-    ```bash
-    npm run install-all
-    ```
-
-3.  **Start the development servers:**
-
-    ```bash
-    npm run dev
-    ```
+and follow the steps there after.
 
 Your frontend will be running on [http://localhost:5173](https://www.google.com/search?q=http://localhost:5173) and your backend on [http://localhost:5000](https://www.google.com/search?q=http://localhost:5000).
 
@@ -50,7 +30,7 @@ my-app/
 └── package.json     # Root orchestrator
 ```
 
-## Developed By
+#### Developed by Syam Gowtham
 
 - **GitHub**: [github.com/nameishyam](https://www.google.com/search?q=https://github.com/nameishyam)
 - **LinkedIn**: [linkedin.com/in/nameishyam](https://www.google.com/search?q=https://www.linkedin.com/in/nameishyam)

@@ -1,11 +1,16 @@
+#!/usr/bin/env node
+
 import fs from "fs-extra";
 import path from "path";
 import { execSync } from "child_process";
 import { blue, green, cyan, red, bold } from "kolorist";
 import { askQuestions } from "./prompts.js";
 import { generateBackendCode, addProxyToViteConfig } from "./generator.js";
+import { showBanner } from "./startupBanner.js";
 
 async function run() {
+  showBanner();
+
   const response = await askQuestions(process.argv[2]);
   const { projectName, language, framework, authStrategy, autoRun } = response;
   if (!projectName) process.exit(1);
