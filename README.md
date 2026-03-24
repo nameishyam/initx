@@ -1,4 +1,4 @@
-# create-initx 🚀
+# create-initx
 
 A lightning-fast CLI tool to scaffold a modern full-stack application with **React (Vite)** on the frontend and **Express** on the backend, pre-configured with a root orchestrator.
 
