@@ -1,0 +1,71 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+
+      - name: Install Project Dependencies
+        run: npm install
+
+      - name: Build CLI
+        run: npm run build
+
+      - name: Verify Distribution Files
+        run: |
+          test -f dist/cli.js
+          test -f dist/prompts.js
+          test -f dist/generator.js
+          test -f dist/startupBanner.js
+
+      - name: Integration Test (Project Generation)
+        run: |
+          mkdir test-sandbox
+          cd test-sandbox
+          # Simulate user input for prompts
+          printf "ci-test-app\n\r\n\r\n\r\n\r\n\033[B\r" | node ../dist/cli.js
+
+          # Validation
+          test -d ci-test-app/frontend
+          test -d ci-test-app/backend
+          test -f ci-test-app/backend/index.js
+          test -f ci-test-app/package.json
+          grep "proxy" ci-test-app/frontend/vite.config.js
+
+  publish:
+    needs: build-and-test
+    if: github.event_name == 'push' && contains(github.event.head_commit.message, 'release')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Install and Build
+        run: |
+          npm install
+          npm run build
+
+      - name: Publish to NPM
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
