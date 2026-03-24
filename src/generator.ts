@@ -35,3 +35,36 @@ export function addProxyToViteConfig(filePath: string) {
   }
   fs.writeFileSync(filePath, content);
 }
+
+export function addEnvToFrontend(frontendDir: string) {
+  const envPath = `${frontendDir}/.env`;
+
+  const content = `VITE_API_URL=http://localhost:5000\n`;
+
+  fs.writeFileSync(envPath, content);
+}
+
+export function injectApiCall(frontendDir: string, language: string) {
+  const filePath =
+    language === "ts"
+      ? `${frontendDir}/src/main.tsx`
+      : `${frontendDir}/src/main.jsx`;
+
+  if (!fs.existsSync(filePath)) return;
+
+  const existing = fs.readFileSync(filePath, "utf-8");
+
+  if (existing.includes("VITE_API_URL")) return;
+
+  const injection = `
+
+const apiUrl = import.meta.env.VITE_API_URL;
+
+fetch(\`\${apiUrl}/api/status\`)
+  .then(res => res.json())
+  .then(data => console.log("Backend status:", data))
+  .catch(err => console.error("API error:", err));
+`;
+
+  fs.writeFileSync(filePath, existing + injection);
+}

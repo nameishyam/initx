@@ -5,7 +5,12 @@ import path from "path";
 import { execSync } from "child_process";
 import { blue, green, cyan, red, bold } from "kolorist";
 import { askQuestions } from "./prompts.js";
-import { generateBackendCode, addProxyToViteConfig } from "./generator.js";
+import {
+  generateBackendCode,
+  addProxyToViteConfig,
+  injectApiCall,
+  addEnvToFrontend,
+} from "./generator.js";
 import { showBanner } from "./startupBanner.js";
 
 async function run() {
@@ -41,6 +46,13 @@ async function run() {
     );
   } catch (err) {
     console.log(red("Vite note: moving to backend..."));
+  }
+
+  if (authStrategy === "cors") {
+    const frontendDir = path.join(targetDir, "frontend");
+
+    addEnvToFrontend(frontendDir);
+    injectApiCall(frontendDir, language);
   }
 
   console.log(blue("Scaffolding Backend..."));
