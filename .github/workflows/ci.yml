@@ -10,68 +10,112 @@ jobs:
   build-and-test:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: "npm"
 
-      - name: Install Project Dependencies
-        run: npm install
+      - run: npm install
+      - run: npm run build
 
-      - name: Build CLI
-        run: npm run build
-
-      - name: Verify Distribution Files
-        run: |
+      - run: |
           test -f dist/cli.js
           test -f dist/prompts.js
           test -f dist/generator.js
           test -f dist/startupBanner.js
 
-      - name: Integration Test (Project Generation)
-        timeout-minutes: 5
-        run: |
-          # Create a clean space for the test
+      - run: |
           mkdir test-sandbox
           cd test-sandbox
-
-          # Run the CLI using the -y flag to bypass interactive prompts
-          # Usage: node <path-to-js> <project-name> <flags>
           node ../dist/cli.js ci-test-app -y
-
-          # Validation of generated structure
           test -d ci-test-app/frontend
           test -d ci-test-app/backend
           test -f ci-test-app/backend/index.js
           test -f ci-test-app/package.json
-
-          # Verify the dynamic injection (works for JS/TS)
           grep "proxy" ci-test-app/frontend/vite.config.*
 
   publish:
     needs: build-and-test
-    if: github.event_name == 'push' && contains(github.event.head_commit.message, 'release')
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      type: ${{ steps.version.outputs.type }}
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: check
+        run: |
+          MSG="${{ github.event.head_commit.message }}"
+          if [[ "$MSG" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "is_version=true" >> $GITHUB_OUTPUT
+          else
+            echo "is_version=false" >> $GITHUB_OUTPUT
+          fi
+
+      - uses: actions/setup-node@v4
+        if: steps.check.outputs.is_version == 'true'
         with:
           node-version: 20
           registry-url: "https://registry.npmjs.org"
 
-      - name: Install and Build
+      - id: version
+        if: steps.check.outputs.is_version == 'true'
         run: |
-          npm install
-          npm run build
+          VERSION=${{ github.event.head_commit.message }}
 
-      - name: Publish to NPM
-        run: npm publish --access public
+          MAJOR=$(echo $VERSION | cut -d. -f1)
+          MINOR=$(echo $VERSION | cut -d. -f2)
+          PATCH=$(echo $VERSION | cut -d. -f3)
+
+          if [ "$PATCH" != "0" ]; then
+            TYPE="patch"
+          elif [ "$MINOR" != "0" ]; then
+            TYPE="minor"
+          else
+            TYPE="major"
+          fi
+
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "type=$TYPE" >> $GITHUB_OUTPUT
+
+      - run: npm install
+        if: steps.check.outputs.is_version == 'true'
+
+      - run: npm run build
+        if: steps.check.outputs.is_version == 'true'
+
+      - run: npm publish --access public
+        if: steps.check.outputs.is_version == 'true'
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  github-release:
+    needs: publish
+    if: needs.publish.outputs.version != ''
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - id: prev
+        run: |
+          MSG=$(git log -2 --pretty=format:"%s" | tail -n1)
+          echo "msg=$MSG" >> $GITHUB_OUTPUT
+
+      - run: |
+          git tag -f v${{ needs.publish.outputs.version }}
+          git push origin v${{ needs.publish.outputs.version }} --force
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ needs.publish.outputs.version }}
+          name: v${{ needs.publish.outputs.version }} ${{ needs.publish.outputs.type }} release
+          body: ${{ steps.prev.outputs.msg }}
