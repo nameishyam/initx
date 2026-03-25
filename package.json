@@ -21,10 +21,19 @@
     "react",
     "express",
     "fullstack",
-    "vite"
+    "vite",
+    "initx"
   ],
-  "author": "Syam Gowtham Geddam",
+  "author": "Syam Gowtham Geddam <geddamgowtham4@gmail.com>",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nameishyam/initx.git"
+  },
+  "homepage": "https://github.com/nameishyam/initx#readme",
+  "bugs": {
+    "url": "https://github.com/nameishyam/initx/issues"
+  },
   "dependencies": {
     "fs-extra": "^11.2.0",
     "kolorist": "^1.8.0",
