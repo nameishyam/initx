@@ -2,6 +2,7 @@ import prompts from "prompts";
 
 export async function askQuestions(initialName: string) {
   const isCI = process.argv.includes("-y") || process.argv.includes("--yes");
+
   if (isCI) {
     return {
       projectName: initialName || "my-fullstack-app",
