@@ -9,8 +9,42 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    outputs:
+      is_version: ${{ steps.check.outputs.is_version }}
+      version: ${{ steps.version.outputs.version }}
+      type: ${{ steps.version.outputs.type }}
+
     steps:
       - uses: actions/checkout@v4
+
+      - id: check
+        run: |
+          MSG="${{ github.event.head_commit.message }}"
+          if [[ "$MSG" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "is_version=true" >> $GITHUB_OUTPUT
+          else
+            echo "is_version=false" >> $GITHUB_OUTPUT
+          fi
+
+      - id: version
+        if: steps.check.outputs.is_version == 'true'
+        run: |
+          VERSION=${{ github.event.head_commit.message }}
+
+          MAJOR=$(echo $VERSION | cut -d. -f1)
+          MINOR=$(echo $VERSION | cut -d. -f2)
+          PATCH=$(echo $VERSION | cut -d. -f3)
+
+          if [ "$PATCH" != "0" ]; then
+            TYPE="patch"
+          elif [ "$MINOR" != "0" ]; then
+            TYPE="minor"
+          else
+            TYPE="major"
+          fi
+
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "type=$TYPE" >> $GITHUB_OUTPUT
 
       - uses: actions/setup-node@v4
         with:
@@ -36,66 +70,9 @@ jobs:
           test -f ci-test-app/package.json
           grep "proxy" ci-test-app/frontend/vite.config.*
 
-  publish:
-    needs: build-and-test
-    if: github.event_name == 'push'
-    runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.version.outputs.version }}
-      type: ${{ steps.version.outputs.type }}
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - id: check
-        run: |
-          MSG="${{ github.event.head_commit.message }}"
-          if [[ "$MSG" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "is_version=true" >> $GITHUB_OUTPUT
-          else
-            echo "is_version=false" >> $GITHUB_OUTPUT
-          fi
-
-      - uses: actions/setup-node@v4
-        if: steps.check.outputs.is_version == 'true'
-        with:
-          node-version: 20
-          registry-url: "https://registry.npmjs.org"
-
-      - id: version
-        if: steps.check.outputs.is_version == 'true'
-        run: |
-          VERSION=${{ github.event.head_commit.message }}
-
-          MAJOR=$(echo $VERSION | cut -d. -f1)
-          MINOR=$(echo $VERSION | cut -d. -f2)
-          PATCH=$(echo $VERSION | cut -d. -f3)
-
-          if [ "$PATCH" != "0" ]; then
-            TYPE="patch"
-          elif [ "$MINOR" != "0" ]; then
-            TYPE="minor"
-          else
-            TYPE="major"
-          fi
-
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "type=$TYPE" >> $GITHUB_OUTPUT
-
-      - run: npm install
-        if: steps.check.outputs.is_version == 'true'
-
-      - run: npm run build
-        if: steps.check.outputs.is_version == 'true'
-
-      - run: npm publish --access public
-        if: steps.check.outputs.is_version == 'true'
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
   github-release:
-    needs: publish
-    if: needs.publish.outputs.version != ''
+    needs: build-and-test
+    if: needs.build-and-test.outputs.is_version == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -111,11 +88,11 @@ jobs:
           echo "msg=$MSG" >> $GITHUB_OUTPUT
 
       - run: |
-          git tag -f v${{ needs.publish.outputs.version }}
-          git push origin v${{ needs.publish.outputs.version }} --force
+          git tag -f v${{ needs.build-and-test.outputs.version }}
+          git push origin v${{ needs.build-and-test.outputs.version }} --force
 
       - uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ needs.publish.outputs.version }}
-          name: v${{ needs.publish.outputs.version }} ${{ needs.publish.outputs.type }} release
+          tag_name: v${{ needs.build-and-test.outputs.version }}
+          name: v${{ needs.build-and-test.outputs.version }} ${{ needs.build-and-test.outputs.type }} release
           body: ${{ steps.prev.outputs.msg }}
